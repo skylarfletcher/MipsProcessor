@@ -1,5 +1,6 @@
-// Skylar Fletcher + Alaysia Miller - Chambliss 12/9/2025 
-/*Instructions
+// Skylar Fletcher + Alaysia Miller - Chambliss 12/10/2025
+
+/*Instructions for the Processor 
 
 Create a simple MIPS processor that will perform the following MIPS instructions:
     add, sub, and, or, xor, sub, lw, sw, beq, bne, addi 
@@ -31,13 +32,42 @@ R[15} - 000F. M[15] - 000F
 */
 
 /*Algorithm
-1. Create a function to convert hex to binary
-2. Create a function to parse binary instruction into its components (opcode, rs, rt, rd, shamt, funct)
-3. Create a function to execute the instruction based on the opcode
-4. Create a function to display the contents of registers and memory
-5. In the main function, accept hex input, validate it, convert to binary, parse, execute, and display results
-6. Repeat for the number of instructions specified by the user
+1. Create an array of 32 registers and 256 memory locations. Set registers[i] = i and memory[i] = i for simple starting values.
+
+2. Print all registers R[0..15] and memory M[0..15] as 4-digit hex.
+
+3. Ask the user how many instructions they want to run (numInstructions).
+
+4. Create a loop to repeat instructions (k from 0 to numInstructions - 1):
+   a) Input
+      - Prompt the user for an 8-digit hex instruction string. If the length is not 8, print an error and ask again.
+
+   b) Hex → Binary
+      - For each hex digit, convert it to 4-bit binary using hexCharToBinary.  Concatenate into a 32-bit binary string.
+
+   c) Decode Fields
+      - Extract opcode, rs, rt, rd, shamt, funct, and imm from the binary string.
+      - Convert each field from binary to integer.
+      - Sign-extend the 16-bit immediate (imm) to a signed int.
+
+   d) Execute
+      - If opcode == 0 (R-type):
+        - Use funct to choose: add, sub, and, or, xor.
+        -  Perform: R[rd] = R[rs] OP R[rt].
+      - Else (I-type):
+         • If opcode == 8: addi  R[rt] = R[rs] + imm.
+         • If opcode == 35: lw  R[rt] = Memory[R[rs] + imm].
+         • If opcode == 43: sw   Memory[R[rs] + imm] = R[rt].
+         • If opcode == 4:  beq print whether branch taken (R[rs] == R[rt]).
+         • If opcode == 5:  bne print whether branch taken (R[rs] != R[rt]).
+         • Otherwise: print "unknown instruction".
+
+   e) Output
+      - Print the decoded format (R-Type or I-Type), opcode, rs, rt, rd/shamt/funct or imm,and a human-readable instruction (e.g., "add $1, $2, $3").
+      - Call displayState() to show updated registers and memory.
 */ 
+
+
 #include <iostream>
 #include <string>
 #include <iomanip> // Used for hex output formatting
@@ -82,6 +112,7 @@ void displayState(int regs[], int mem[]) {
      // Keep only the lower 16 bits for display
     unsigned int regVal = regs[i] & 0xFFFF;
     unsigned int memVal = mem[i] & 0xFFFF; 
+    
     // Print register index in decimal 
     cout << dec << "R[$" << i << "] - " << setfill('0') << setw(4) << hex << uppercase << regVal;
     // Print memory address in decimal 
@@ -104,7 +135,7 @@ int main() {
         memory[i] = i; 
     }
 
-    cout << "WELCOME TO THE MIPS SIMULATOR!" << endl;
+    cout << "WELCOME TO THE MIPS PROCESSOR!" << endl;
     displayState(registers, memory);
 
 // ask users how many intstructions they want to run
@@ -183,23 +214,23 @@ int main() {
             cout << "e. Shamt:  " << shamt << endl;
             cout << "f. Funct:  " << funct << endl;
             
-            if (funct == 32) { // add registers[rd] = registers[rs] + registers[rt];
+            if (funct == 32) { // ADD $rd = $rs +$rt
                 registers[rd] = registers[rs] + registers[rt];
                 cout << "Instruction: add $" << rd << ", $" << rs << ", $" << rt << endl;
             }
-            else if (funct == 34) { // sub registers[rd] = registers[rs] - registers[rt];
+            else if (funct == 34) { // SUB $rd = $rs - $rt ;
                 registers[rd] = registers[rs] - registers[rt];
                 cout << "Instruction: sub $" << rd << ", $" << rs << ", $" << rt << endl;
             }
-            else if (funct == 36) { // and registers[rd] = registers[rs] & registers[rt];
+            else if (funct == 36) { // AND $rd = $rs & $rt 
                 registers[rd] = registers[rs] & registers[rt];
                 cout << "Instruction: and $" << rd << ", $" << rs << ", $" << rt << endl;
             }
-            else if (funct == 37) { // or registers[rd] = registers[rs] | registers[rt];
+            else if (funct == 37) { // OR $rd = $rs | $rt 
                 registers[rd] = registers[rs] | registers[rt];
                 cout << "Instruction: or $" << rd << ", $" << rs << ", $" << rt << endl;
             }
-             else if (funct == 38) { // xor registers[rd] = registers[rs] ^ registers[rt];
+             else if (funct == 38) { // XOR $rd = $rs ^ $rt
                 registers[rd] = registers[rs] ^ registers[rt];
                 cout << "Instruction: xor $" << rd << ", $" << rs << ", $" << rt << endl;
             }
@@ -213,12 +244,12 @@ int main() {
             // I-Format Instructions
             cout << "g. Imm:    " << imm << endl;
 
-            if (opcode == 8) { // addi $rt, $rs, $imm
+            if (opcode == 8) { // ADDI $rt, $rs, $imm $rt = registers[rs] + imm;
                 registers[rt] = registers[rs] + imm;
                 cout << "Instruction: addi $" << rt << ", $" << rs << ", " << imm << endl;
             }
 
-            else if (opcode == 35) { // lw
+            else if (opcode == 35) { // LW registers[rt] = memory[rs + imm]  $rt, imm($rs)  -> R[$rt] = M[rs+imm];
                 int addr = registers[rs] + imm;  // $2 + offset
 
                 if (addr < 0 || addr >= 256) {
@@ -230,7 +261,7 @@ int main() {
             }    
             
             
-            else if (opcode == 43) { // sw memory[rt] = registers[rt];
+            else if (opcode == 43) { // SW memory[rt] = registers[rt]  $rt, imm($rs)  -> M[rs+imm] = R[$rt];
                 int addr = registers[rs] + imm;  
 
             if (addr < 0 || addr >= 256) {
@@ -241,7 +272,8 @@ int main() {
                     }
             }
 
-            // Branch Instructions
+            // Branch Instructions, checks if $rs = $rt are the same or not
+            
             else if (opcode == 4) { // beq registers[rs] == registers[rt]
                 if (registers[rs] == registers[rt])
                      cout << "Instruction: beq $" << rt << ", $" << rs << ", " << imm << "  (Branch Taken)" << endl;
