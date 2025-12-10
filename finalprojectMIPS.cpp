@@ -1,11 +1,53 @@
+// Skylar Fletcher + Alaysia Miller - Chambliss 12/9/2025 
+/*Instructions
+
+Create a simple MIPS processor that will perform the following MIPS instructions:
+    add, sub, and, or, xor, sub, lw, sw, beq, bne, addi 
+1. The program should be able to accept a hex instruction. Input validation: must be 8 digits no less
+or more
+2. Convert the instruction to binary
+3. Parse the binary number into Register format:
+    a. op-code- Instruction opcode
+    b. rs – The 1st register source operand
+    c. rt – The 2nd register source operand
+    d. rd – The destination register
+    e. shamt – Shift amount
+    f. funct – Function code
+4. Keep in mind which format of instruction (R or I)
+    R-format : 6 bits 5 bits 5 bits 5 bits 5 bits 6 bits
+    I-format: 6 bits 5 bits 5 bits 16 bits
+5.  Perform tasks based on the opcode
+6. Display the content in each register after each instruction
+7. Also print the to show the actual instruction: i.e. add $1, $2, $3
+8. As stated in class there are 2 sets for the output...Registers 0-15(all other instructions) and
+Memory 0-15(for lw and sw) – Display Both with Labels
+R[0] - 0000. M[0] - 0000
+R[1] - 0001. M[1] - 0001
+R[2] – 0002. M[2] - 0002
+.. ....
+R[15} - 000F. M[15] - 000F
+
+
+*/
+
+/*Algorithm
+1. Create a function to convert hex to binary
+2. Create a function to parse binary instruction into its components (opcode, rs, rt, rd, shamt, funct)
+3. Create a function to execute the instruction based on the opcode
+4. Create a function to display the contents of registers and memory
+5. In the main function, accept hex input, validate it, convert to binary, parse, execute, and display results
+6. Repeat for the number of instructions specified by the user
+*/ 
 #include <iostream>
 #include <string>
 #include <iomanip> // Used for hex output formatting
 
 using namespace std;
 
-// HELPER FUNCTION: Converts a single Hex character (0-F) to a 4-bit Binary string
+// Utilizing a helper fundtion that converts a single Hex character (0-F) to a 4-bit Binary string
 string hexCharToBinary(char hex) {
+    // Map hex character to its binary representation
+    // Utilize a switch case for clarity and return its binary equivalent
     switch(toupper(hex)) {
         case '0': return "0000";
         case '1': return "0001";
@@ -27,25 +69,34 @@ string hexCharToBinary(char hex) {
     }
 }
 
-// HELPER FUNCTION: Displays the current state of Registers and Memory
+// Helper Function:  Displays the current state of Registers and Memory
 void displayState(int regs[], int mem[]) {
-    cout << "\n--- Current State ---\n";
-    cout << "Registers (0-15)\t\tMemory (0-15)\n";
+    cout << "\n          --- Current State ---\n";
+    cout << endl; 
+    cout << "Registers (0-15)\tMemory (0-15)\n";
+    cout << endl; 
     
+    // Display Registers and Memory side by side
     for (int i = 0; i < 16; ++i) {
-        cout << "R[" << i << "] - " << setw(4) << setfill('0') << hex << uppercase << regs[i];
-        cout << "\t\tM[" << i << "] - " << setw(4) << setfill('0') << hex << uppercase << mem[i] << endl;
+    
+     // Keep only the lower 16 bits for display
+    unsigned int regVal = regs[i] & 0xFFFF;
+    unsigned int memVal = mem[i] & 0xFFFF; 
+    // Print register index in decimal 
+    cout << dec << "R[$" << i << "] - " << setfill('0') << setw(4) << hex << uppercase << regVal;
+    // Print memory address in decimal 
+    cout << "\t\tM[" << dec << i << "] - " << setfill('0') << setw(4) << hex << uppercase << memVal << dec << endl;
     }
-    cout << dec; // Switch back to decimal
-    cout << "---------------------\n";
+    cout << dec; // switch back to decimal for subsequent output
+    cout << "           ---------------------\n";
 }
 
 int main() {
-    // 1. SETUP: Create the imaginary CPU parts
+    //  Create the imaginary CPU registers and memory
     int registers[32]; 
     int memory[256];
 
-    // Initialize them
+    // Initialize the registers and memory with sample values for testing
     for (int i = 0; i < 32; i++) {
         registers[i] = i; 
     }
@@ -53,20 +104,22 @@ int main() {
         memory[i] = i; 
     }
 
-    cout << "SIMPLE MIPS SIMULATOR" << endl;
+    cout << "WELCOME TO THE MIPS SIMULATOR!" << endl;
     displayState(registers, memory);
 
+// ask users how many intstructions they want to run
     int numInstructions;
-    cout << "How many instructions do you want to run? ";
+    cout << "How many instructions do you want to run? (Enter a number) ";
     cin >> numInstructions;
 
-    // 2. MAIN LOOP
+    // MAIN LOOP: Get hex instruction from user, Convert to binary, Parse into components, Execute the instruction, Show updated stat
     for (int k = 0; k < numInstructions; k++) {
+        // Input Hex Instruction
         string hexInput;
         cout << "\nEnter 8-digit Hex instruction (e.g. 00642820): ";
         cin >> hexInput;
 
-        // Validation
+        // Validation,Check length of input
         if (hexInput.length() != 8) {
             cout << "Error: Input must be exactly 8 characters." << endl;
             k--; 
@@ -89,7 +142,7 @@ int main() {
         string functStr  = binaryString.substr(26, 6);
         string immStr    = binaryString.substr(16, 16); // For I-Format
 
-        // Convert strings to Integers
+        // Convert opcode binary strings to Integers (base2 = binary )
         int opcode = stoi(opcodeStr, nullptr, 2);
         int rs     = stoi(rsStr, nullptr, 2);
         int rt     = stoi(rtStr, nullptr, 2);
@@ -97,70 +150,112 @@ int main() {
         int shamt  = stoi(shamtStr, nullptr, 2); // Shift Amount
         int funct  = stoi(functStr, nullptr, 2);
         int imm    = stoi(immStr, nullptr, 2);
+        // Sign-extend immediate value if negative
+        if (immStr[0] == '1') { // Check sign bit
+            imm -= (1 << 16); // Adjust for negative value
+        }
 
-        // STEP 3: Parse and Display Components (AS REQUESTED)
-        cout << "\nParsed Components:" << endl;
+        // Display format before parsed components
+        if (opcode == 0) {
+            cout << "Format: R-Type" << endl;
+        } else {
+            cout << "Format: I-Type" << endl;
+        }
+
+        // STEP 3: Parse and Display Components - NOW CONDITIONAL
         cout << "a. Opcode: " << opcode << endl;
         cout << "b. Rs:     " << rs << " ($" << rs << ")" << endl;
         cout << "c. Rt:     " << rt << " ($" << rt << ")" << endl;
-        cout << "d. Rd:     " << rd << " ($" << rd << ")" << endl;
-        cout << "e. Shamt:  " << shamt << endl;
-        cout << "f. Funct:  " << funct << endl; 
-        cout << "--------------------------------" << endl;
+
+
 
         // STEP 4: Execute logic
+        //  - If opcode == 0: This is an R-TYPE instruction
+        //    → Operations: ADD (32), SUB (34), AND (36), OR (37), XOR (38)
+
+        //  - If opcode != 0: This is an I-TYPE instruction
+        //    Operations: ADDI (8), LW (35), SW (43), BEQ (4), BNE (5)
+
+
+        // R-Format Instructions
         if (opcode == 0) { 
-            // R-Format Instructions
-            cout << "Format: R-Type" << endl;
+            cout << "d. Rd:     " << rd << " ($" << rd << ")" << endl;
+            cout << "e. Shamt:  " << shamt << endl;
+            cout << "f. Funct:  " << funct << endl;
             
-            if (funct == 32) { // add
+            if (funct == 32) { // add registers[rd] = registers[rs] + registers[rt];
                 registers[rd] = registers[rs] + registers[rt];
                 cout << "Instruction: add $" << rd << ", $" << rs << ", $" << rt << endl;
             }
-            else if (funct == 34) { // sub
+            else if (funct == 34) { // sub registers[rd] = registers[rs] - registers[rt];
                 registers[rd] = registers[rs] - registers[rt];
                 cout << "Instruction: sub $" << rd << ", $" << rs << ", $" << rt << endl;
             }
-            else if (funct == 36) { // and
+            else if (funct == 36) { // and registers[rd] = registers[rs] & registers[rt];
                 registers[rd] = registers[rs] & registers[rt];
                 cout << "Instruction: and $" << rd << ", $" << rs << ", $" << rt << endl;
             }
-            else if (funct == 37) { // or
+            else if (funct == 37) { // or registers[rd] = registers[rs] | registers[rt];
                 registers[rd] = registers[rs] | registers[rt];
                 cout << "Instruction: or $" << rd << ", $" << rs << ", $" << rt << endl;
             }
-             else if (funct == 38) { // xor
+             else if (funct == 38) { // xor registers[rd] = registers[rs] ^ registers[rt];
                 registers[rd] = registers[rs] ^ registers[rt];
                 cout << "Instruction: xor $" << rd << ", $" << rs << ", $" << rt << endl;
             }
+            else {
+                cout << "Instruction: Unknown R-type (funct = " << funct << ")" << endl;
+            }
         } 
+
+        // I-Format Instructions
         else { 
             // I-Format Instructions
-            cout << "Format: I-Type" << endl;
+            cout << "g. Imm:    " << imm << endl;
 
-            if (opcode == 8) { // addi
+            if (opcode == 8) { // addi $rt, $rs, $imm
                 registers[rt] = registers[rs] + imm;
                 cout << "Instruction: addi $" << rt << ", $" << rs << ", " << imm << endl;
             }
+
             else if (opcode == 35) { // lw
-                registers[rt] = memory[imm];
-                cout << "Instruction: lw $" << rt << ", " << imm << "($" << rs << ")" << endl;
+                int addr = registers[rs] + imm;  // $2 + offset
+
+                if (addr < 0 || addr >= 256) {
+                     cout << "Error: lw address out of range: " << addr << endl;
+                } else {
+                    registers[rt] = memory[addr];
+                     cout << "Instruction: lw $" << rt << ", " << imm << "($" << rs << ")  -> R[$" << rt << "] = M[" << addr << "]" << endl;
+                    }
+            }    
+            
+            
+            else if (opcode == 43) { // sw memory[rt] = registers[rt];
+                int addr = registers[rs] + imm;  
+
+            if (addr < 0 || addr >= 256) {
+                cout << "Error: sw address out of range: " << addr << endl;
+            } else {
+                memory[addr] = registers[rt];
+                cout << "Instruction: sw $" << rt << ", " << imm << "($" << rs << ")  -> M[" << addr << "] = R[$" << rt << "]" << endl;
+                    }
             }
-            else if (opcode == 43) { // sw
-                memory[imm] = registers[rt];
-                cout << "Instruction: sw $" << rt << ", " << imm << "($" << rs << ")" << endl;
-            }
-            else if (opcode == 4) { // beq
+
+            // Branch Instructions
+            else if (opcode == 4) { // beq registers[rs] == registers[rt]
                 if (registers[rs] == registers[rt])
-                    cout << "Instruction: beq (Branch Taken!)" << endl;
+                     cout << "Instruction: beq $" << rt << ", $" << rs << ", " << imm << "  (Branch Taken)" << endl;
                 else
-                    cout << "Instruction: beq (Branch Not Taken)" << endl;
+                     cout << "Instruction: beq $" << rt << ", $" << rs << ", " << imm << "  (Branch Not Taken)" << endl;
             }
-            else if (opcode == 5) { // bne
+            else if (opcode == 5) { // bne registers[rs] != registers[rt]
                 if (registers[rs] != registers[rt])
-                    cout << "Instruction: bne (Branch Taken!)" << endl;
+                    cout << "Instruction: bne $" << rs << ", $" << rt << ", " << imm << "  (Branch Taken)" << endl;
                 else
-                    cout << "Instruction: bne (Branch Not Taken)" << endl;
+                    cout << "Instruction: bne $" << rs << ", $" << rt << ", " << imm << "  (Branch Not Taken)" << endl;
+            }
+            else {
+                cout << "Instruction: Unknown I-type (opcode = " << opcode << ")" << endl;
             }
         }
 
