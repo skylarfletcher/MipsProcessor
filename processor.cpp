@@ -1,4 +1,5 @@
-// Skylar Fletcher + Alaysia 12/9/2025 
+// Skylar Fletcher + Alaysia Miller-Chambliss 
+// Date: 12/9/2025 
 /*Instructions
 
 Create a simple MIPS processor that will perform the following MIPS instructions:
